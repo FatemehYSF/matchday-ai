@@ -1,0 +1,66 @@
+[
+  {
+    "match_id": "m001",
+    "competition": "Eredivisie",
+    "home_team": "Ajax",
+    "away_team": "PSV",
+    "home_score": 2,
+    "away_score": 1,
+    "goals": [
+      {"player": "Brian Brobbey", "team": "Ajax", "minute": 23},
+      {"player": "Luuk de Jong", "team": "PSV", "minute": 58},
+      {"player": "Brian Brobbey", "team": "Ajax", "minute": 89}
+    ]
+  },
+  {
+    "match_id": "m002",
+    "competition": "Premier League",
+    "home_team": "Liverpool",
+    "away_team": "Arsenal",
+    "home_score": 0,
+    "away_score": 0,
+    "goals": []
+  },
+  {
+    "match_id": "m003",
+    "competition": "La Liga",
+    "home_team": "Real Madrid",
+    "away_team": "Barcelona",
+    "home_score": 3,
+    "away_score": 2,
+    "goals": [
+      {"player": "Kylian Mbappé", "team": "Real Madrid", "minute": 12},
+      {"player": "Lamine Yamal", "team": "Barcelona", "minute": 34},
+      {"player": "Vinícius Júnior", "team": "Real Madrid", "minute": 51},
+      {"player": "Robert Lewandowski", "team": "Barcelona", "minute": 77},
+      {"player": "Jude Bellingham", "team": "Real Madrid", "minute": 90}
+    ]
+  },
+  {
+    "match_id": "m004",
+    "competition": "Serie A",
+    "home_team": "Inter",
+    "away_team": "Juventus",
+    "home_score": 1,
+    "away_score": 4,
+    "goals": [
+      {"player": "Dušan Vlahović", "team": "Juventus", "minute": 9},
+      {"player": "Lautaro Martínez", "team": "Inter", "minute": 30},
+      {"player": "Kenan Yıldız", "team": "Juventus", "minute": 44},
+      {"player": "Dušan Vlahović", "team": "Juventus", "minute": 66},
+      {"player": "Kenan Yıldız", "team": "Juventus", "minute": 81}
+    ]
+  },
+  {
+    "match_id": "m005",
+    "competition": "Bundesliga",
+    "home_team": "Bayern Munich",
+    "away_team": "Borussia Dortmund",
+    "home_score": 1,
+    "away_score": 1,
+    "goals": [
+      {"player": "Harry Kane", "team": "Bayern Munich", "minute": 15},
+      {"player": "Serhou Guirassy", "team": "Borussia Dortmund", "minute": 88}
+    ]
+  }
+]
