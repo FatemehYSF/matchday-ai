@@ -33,7 +33,7 @@ class Platform:
     max_chars: int
     max_hashtags: int
     style: str
-
+ 
 
 PLATFORMS = {
     "instagram": Platform("instagram", 300, 4, "Energetic, 1-3 short sentences, up to 2 emojis, end with a question to fans."),
