@@ -20,6 +20,10 @@ class Match(BaseModel):
     def scoreline(self) -> str:
         return f"{self.home_team} {self.home_score}-{self.away_score} {self.away_team}"
 
+    @property
+    def scorers(self) -> set[str]:
+        return {goal.player for goal in self.goals}
+
 
 class CaptionDraft(BaseModel):
     """The exact shape the LLM must answer in."""
@@ -40,3 +44,9 @@ PLATFORMS = {
     "tiktok": Platform("tiktok", 150, 3, "Very short and punchy. One emoji maximum."),
     "x": Platform("x", 280, 2, "Breaking-news style. Lead with the score. No emojis."),
 }
+
+
+class CheckResult(BaseModel):
+    name: str
+    passed: bool
+    detail: str = ""
