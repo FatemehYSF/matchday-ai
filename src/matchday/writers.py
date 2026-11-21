@@ -34,6 +34,8 @@ class MockWriter:
 
     def write(self, match: Match, platform: Platform, feedback: list[str]) -> CaptionDraft:
         home, away = match.home_score, match.away_score
+        if not feedback and int(match.match_id[-1]) % 2 == 1:   # NEW
+            home, away = away, home                              # NEW
 
         if match.goals:
             names = [g.player for g in match.goals]
@@ -43,8 +45,11 @@ class MockWriter:
             star = " Two walls, zero goals."
 
         caption = f"FULL TIME: {match.home_team} {home}-{away} {match.away_team}.{star}"
+        if platform.name == "instagram":                         # NEW
+            caption += " Who was your player of the match? 👇"   # NEW
 
         tag = "#" + match.competition.replace(" ", "")
         hashtags = [tag, "#Football", "#Matchday", "#FullTime"][: platform.max_hashtags]
+        if not feedback and platform.name == "tiktok":                      # NEW
+            hashtags = [tag, "#Football", "#Matchday", "#FullTime", "#Goals"]  # NEW
         return CaptionDraft(caption=caption, hashtags=hashtags)
-    
