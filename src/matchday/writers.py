@@ -13,3 +13,17 @@ Hard rules:
 - Mention both team names exactly as written in the data.
 - Only mention players who scored in this match.
 - Hashtags go in the hashtags list, not in the caption text."""
+
+
+def build_user_prompt(match: Match, platform: Platform, feedback: list[str]) -> str:
+    prompt = (
+        f"Platform: {platform.name}\n"
+        f"Style: {platform.style}\n"
+        f"Limit: {platform.max_chars} characters in total, "
+        f"at most {platform.max_hashtags} hashtags.\n\n"
+        f"Match data (JSON):\n{match.model_dump_json(indent=2)}"
+    )
+    if feedback:
+        prompt += "\n\nYour previous caption failed these checks. Fix them:\n"
+        prompt += "\n".join(f"- {item}" for item in feedback)
+    return prompt
