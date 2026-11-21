@@ -1,4 +1,7 @@
-from .models import CaptionDraft, CheckResult, Match
+from .models import CaptionDraft, CheckResult, Match, Platform
+import re
+
+BANNED_WORDS = {"idiot", "stupid", "trash", "useless", "clown", "pathetic"}
 
 
 def check_score(match: Match, draft: CaptionDraft) -> CheckResult:
@@ -29,3 +32,42 @@ def check_players(match: Match, draft: CaptionDraft, known_players: set[str]) ->
         passed=not wrong,
         detail=f"Mentions players who did not score: {', '.join(wrong)}" if wrong else "",
     )
+
+def check_length(draft: CaptionDraft, platform: Platform) -> CheckResult:
+    text = f"{draft.caption} {' '.join(draft.hashtags)}"
+    ok = len(text) <= platform.max_chars
+    return CheckResult(
+        name="length_ok",
+        passed=ok,
+        detail="" if ok else f"{len(text)} characters, limit is {platform.max_chars}",
+    )
+
+
+def check_hashtags(draft: CaptionDraft, platform: Platform) -> CheckResult:
+    ok = 1 <= len(draft.hashtags) <= platform.max_hashtags
+    return CheckResult(
+        name="hashtags_ok",
+        passed=ok,
+        detail="" if ok else f"Use 1 to {platform.max_hashtags} hashtags, got {len(draft.hashtags)}",
+    )
+
+
+def check_safe_language(draft: CaptionDraft) -> CheckResult:
+    words = set(re.findall(r"[a-z]+", draft.caption.lower()))
+    hits = sorted(words & BANNED_WORDS)
+    return CheckResult(
+        name="safe_language",
+        passed=not hits,
+        detail=f"Banned words: {', '.join(hits)}" if hits else "",
+    )
+
+
+def run_all_checks(match: Match, draft: CaptionDraft, platform: Platform, known_players: set[str]) -> list[CheckResult]:
+    return [
+        check_score(match, draft),
+        check_teams(match, draft),
+        check_players(match, draft, known_players),
+        check_length(draft, platform),
+        check_hashtags(draft, platform),
+        check_safe_language(draft),
+    ]
