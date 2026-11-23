@@ -5,6 +5,8 @@ from .checks import run_all_checks
 from .models import PLATFORMS, Match, Platform
 from .writers import MockWriter
 
+from . import db
+
 MAX_ATTEMPTS = 3
 
 
@@ -13,12 +15,12 @@ def load_matches(path: str) -> list[Match]:
     return [Match.model_validate(item) for item in raw]
 
 
-def caption_with_retries(writer: MockWriter, match: Match, platform: Platform, known_players: set[str]):
+def caption_with_retries(conn, writer, match, platform, known_players):
     feedback: list[str] = []
     for attempt in range(1, MAX_ATTEMPTS + 1):
         draft = writer.write(match, platform, feedback)
         results = run_all_checks(match, draft, platform, known_players)
-        print(f"  try {attempt}: {draft.caption}")
+        db.save_caption(conn, match.match_id, platform.name, attempt, draft, results)
 
         if all(r.passed for r in results):
             break
@@ -29,12 +31,16 @@ def caption_with_retries(writer: MockWriter, match: Match, platform: Platform, k
 
 
 def run_pipeline(matches_path: str = "data/matches.json") -> None:
+    Path("output/matchday.db").unlink(missing_ok=True)
+    conn = db.connect()
     matches = load_matches(matches_path)
     known_players = {g.player for m in matches for g in m.goals}
     writer = MockWriter()
 
     for match in matches:
         for platform in PLATFORMS.values():
-            draft, results, attempts = caption_with_retries(writer, match, platform, known_players)
+            draft, results, attempts = caption_with_retries(conn, writer, match, platform, known_players)
             status = "PASS" if all(r.passed for r in results) else "FAIL"
             print(f"[{status}] {match.match_id} {platform.name:<9} (attempts: {attempts}) {draft.caption}")
+    db.print_report(conn)
+    conn.close()

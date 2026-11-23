@@ -38,3 +38,19 @@ def save_caption(conn, match_id, platform, attempt, draft, results) -> None:
         [(cur.lastrowid, r.name, r.passed, r.detail) for r in results],
     )
     conn.commit()
+
+
+def print_report(conn) -> None:
+    print("\n=== First-try pass rate ===")
+    rows = conn.execute(
+        "SELECT platform, COUNT(*), SUM(passed) FROM captions WHERE attempt = 1 GROUP BY platform"
+    ).fetchall()
+    for platform, total, passed in rows:
+        print(f"{platform:<10} {passed}/{total} = {100 * passed / total:.0f}%")
+
+    print("\n=== Failed checks ===")
+    rows = conn.execute(
+        "SELECT name, COUNT(*) FROM checks WHERE passed = 0 GROUP BY name ORDER BY COUNT(*) DESC"
+    ).fetchall()
+    for name, failures in rows:
+        print(f"{name:<15} {failures}")
