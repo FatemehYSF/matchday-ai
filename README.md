@@ -107,50 +107,50 @@ Not everything worked the first time. These are the real problems I hit while bu
 I built the project in small steps and committed each one to git. Each step adds one idea on top of the one before.
 
 ### Stage 1: Describe the data
-| # | Step | 🟢 In simple words | 🔵 Technically |
-|---|---|---|---|
-| 1 | Match and Goal models + sample data | I told Python what a football match looks like | Pydantic `Match` and `Goal` models with validation (`minute` between 1 and 130, scores ≥ 0), plus `data/matches.json` |
-| 2 | Improve the models | Added handy shortcuts, like "the score as text" | `scoreline` and `scorers` properties on `Match` |
-| 3 | Platform class | Each app (Instagram, TikTok, X) has its own rules | A frozen `Platform` dataclass with `max_chars`, `max_hashtags` and `style`, stored in a `PLATFORMS` dict |
+| # | Step | Details |
+|---|---|---|
+| 1 | Match and Goal models + sample data | Pydantic `Match` and `Goal` models with validation (`minute` between 1 and 130, scores ≥ 0), plus `data/matches.json` |
+| 2 | Improve the models | `scoreline` and `scorers` properties on `Match` |
+| 3 | Platform class | A frozen `Platform` dataclass with `max_chars`, `max_hashtags` and `style`, stored in a `PLATFORMS` dict |
 
 ### Stage 2: The writer
-| # | Step | 🟢 In simple words | 🔵 Technically |
-|---|---|---|---|
-| 4 | System prompt | I wrote the "job description" for the AI: tone and strict rules | `SYSTEM_PROMPT` in `writers.py` with the brand voice and hard factual rules |
-| 5 | User prompt | Each request gives the AI the match facts and the platform rules | `build_user_prompt()` puts the platform style, limits and match JSON together, and adds feedback when there is any |
-| 6–7 | Fake AI (MockWriter) | A pretend AI, so I can test for free without the internet | `MockWriter.write()` returns a `CaptionDraft`. It makes mistakes on purpose on the first try |
+| # | Step | Details |
+|---|---|---|
+| 4 | System prompt | `SYSTEM_PROMPT` in `writers.py` with the brand voice and hard factual rules |
+| 5 | User prompt | `build_user_prompt()` puts the platform style, limits and match JSON together, and adds feedback when there is any |
+| 6–7 | Fake AI (MockWriter) | `MockWriter.write()` returns a `CaptionDraft`. It makes mistakes on purpose on the first try |
 
 ### Stage 3: The checker
-| # | Step | 🟢 In simple words | 🔵 Technically |
-|---|---|---|---|
-| 8 | Score, team and player checks | The checker makes sure the facts are right | `check_score`, `check_teams`, `check_players` each return a `CheckResult` |
-| 9 | All quality checks | Also checks length, hashtags and polite language | `check_length`, `check_hashtags`, `check_safe_language` (regex + banned word set), combined in `run_all_checks()` |
+| # | Step | Details |
+|---|---|---|
+| 8 | Score, team and player checks | `check_score`, `check_teams`, `check_players` each return a `CheckResult` |
+| 9 | All quality checks | `check_length`, `check_hashtags`, `check_safe_language` (regex + banned word set), combined in `run_all_checks()` |
 
 ### Stage 4: Tests
-| # | Step | 🟢 In simple words | 🔵 Technically |
-|---|---|---|---|
-| 10 | First tests | Automatic proof that the checker catches mistakes | pytest unit tests: a correct score passes, a swapped score fails |
-| 11 | A test for every check | Every rule now has its own test | 8 tests in `tests/test_checks.py`; `pythonpath = ["src"]` in `pyproject.toml` |
+| # | Step | Details |
+|---|---|---|
+| 10 | First tests | pytest unit tests: a correct score passes, a swapped score fails |
+| 11 | A test for every check | 8 tests in `tests/test_checks.py`; `pythonpath = ["src"]` in `pyproject.toml` |
 
 ### Stage 5: The pipeline
-| # | Step | 🟢 In simple words | 🔵 Technically |
-|---|---|---|---|
-| 12 | Load all matches | The program reads all the matches from the file | `load_matches()` with `Match.model_validate()` for each item |
-| 13 | Feedback loop | If the checker says "wrong", the writer tries again with tips | `caption_with_retries()`: failed check details go back as `feedback`, up to `MAX_ATTEMPTS = 3` |
+| # | Step | Details |
+|---|---|---|
+| 12 | Load all matches | `load_matches()` with `Match.model_validate()` for each item |
+| 13 | Feedback loop | `caption_with_retries()`: failed check details go back as `feedback`, up to `MAX_ATTEMPTS = 3` |
 
 ### Stage 6: Remember everything
-| # | Step | 🟢 In simple words | 🔵 Technically |
-|---|---|---|---|
-| 14 | Save every attempt | The program writes every try in a notebook | `db.save_caption()` is called on every attempt |
-| 15 | SQLite + SQL report | The notebook is a real database, and I ask it questions | Tables `captions` and `checks`. `GROUP BY` queries for the first-try pass rate and the most failed checks |
+| # | Step | Details |
+|---|---|---|
+| 14 | Save every attempt | `db.save_caption()` is called on every attempt |
+| 15 | SQLite + SQL report | Tables `captions` and `checks`. `GROUP BY` queries for the first-try pass rate and the most failed checks |
 
 ### Stage 7: Pictures
-| # | Step | 🟢 In simple words | 🔵 Technically |
-|---|---|---|---|
-| 16 | First match card | The program draws a picture with the score | Pillow `Image` + `ImageDraw`, a 1080×1080 PNG |
-| 17 | Caption on the card | The approved post text goes on the picture too | Text wrapping, emoji removal, and rendering inside the pipeline for passing Instagram captions |
-| 18 | Nicer design + README | Made the pictures beautiful and wrote this page | Gradient background, blurred glows, team badges, dimmed losing score, see-through caption panel |
-| 19 | Clean code + editor setup | Fixed all the red warnings in my editor | `.flake8`, `[tool.mypy]` in `pyproject.toml`, `.vscode/settings.json`, mypy in `.venv`, small style fixes |
+| # | Step | Details |
+|---|---|---|
+| 16 | First match card | Pillow `Image` + `ImageDraw`, a 1080×1080 PNG |
+| 17 | Caption on the card | Text wrapping, emoji removal, and rendering inside the pipeline for passing Instagram captions |
+| 18 | Nicer design + README | Gradient background, blurred glows, team badges, dimmed losing score, see-through caption panel |
+| 19 | Clean code + editor setup | `.flake8`, `[tool.mypy]` in `pyproject.toml`, `.vscode/settings.json`, mypy in `.venv`, small style fixes |
 
 ## How it works
 
