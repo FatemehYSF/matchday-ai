@@ -6,6 +6,7 @@ from .models import PLATFORMS, Match, Platform
 from .writers import MockWriter
 
 from . import db
+from .graphics import render_match_card
 
 MAX_ATTEMPTS = 3
 
@@ -40,6 +41,8 @@ def run_pipeline(matches_path: str = "data/matches.json") -> None:
     for match in matches:
         for platform in PLATFORMS.values():
             draft, results, attempts = caption_with_retries(conn, writer, match, platform, known_players)
+            if platform.name == "instagram" and all(r.passed for r in results):
+                render_match_card(match, draft.caption, f"output/{match.match_id}.png")
             status = "PASS" if all(r.passed for r in results) else "FAIL"
             print(f"[{status}] {match.match_id} {platform.name:<9} (attempts: {attempts}) {draft.caption}")
     db.print_report(conn)
