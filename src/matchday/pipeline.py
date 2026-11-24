@@ -2,7 +2,7 @@ import json
 from pathlib import Path
 
 from .checks import run_all_checks
-from .models import PLATFORMS, Match, Platform
+from .models import PLATFORMS, Match
 from .writers import MockWriter
 
 from . import db

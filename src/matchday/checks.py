@@ -14,8 +14,6 @@ def check_score(match: Match, draft: CaptionDraft) -> CheckResult:
     )
 
 
-
-
 def check_teams(match: Match, draft: CaptionDraft) -> CheckResult:
     missing = [t for t in (match.home_team, match.away_team) if t not in draft.caption]
     return CheckResult(
@@ -32,6 +30,7 @@ def check_players(match: Match, draft: CaptionDraft, known_players: set[str]) ->
         passed=not wrong,
         detail=f"Mentions players who did not score: {', '.join(wrong)}" if wrong else "",
     )
+
 
 def check_length(draft: CaptionDraft, platform: Platform) -> CheckResult:
     text = f"{draft.caption} {' '.join(draft.hashtags)}"
