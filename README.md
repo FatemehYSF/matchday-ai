@@ -46,6 +46,61 @@ I built this project to learn how to use AI-generated text safely in practice. T
 | **Testing** | Unit tests for every check with **pytest** |
 | **Databases & SQL** | Saving every attempt and check result in **SQLite**, then reporting pass rates with SQL |
 | **Image generation** | Drawing match cards with **Pillow**: gradients, glows, team badges and text layout |
+| **Developer tools** | Virtual environments, the `src/` project layout, linters (**flake8**, **mypy**) and VS Code settings |
+| **Git** | Building the project in small commits, one idea at a time |
+
+## Challenges I faced (and how I solved them)
+
+Not everything worked the first time. These are the real problems I hit while building this project.
+
+### 1. The AI can get the facts wrong
+- 🟢 **Problem:** a caption can look perfect but still have the score the wrong way around (`1-2` instead of `2-1`) or too many hashtags.
+- 🔵 **Solution:** I made the `MockWriter` make these mistakes **on purpose** on the first try. Then I built checks that catch them and a feedback loop that sends the error back to the writer. In the report, TikTok passes **0%** on the first try but every caption is fixed on the retry, which shows why the loop is needed.
+- 💡 **Lesson:** never trust AI output just because it reads well. Check the facts with code.
+
+### 2. Small text details break simple checks
+- 🟢 **Problem:** a score can be written with a long dash (`2–1`) instead of a normal one (`2-1`), so a simple text search would miss it.
+- 🔵 **Solution:** `check_score` changes `–` to `-` before it searches.
+- 💡 **Lesson:** a check is only as good as the cases it expects. Tests help find the cases I forgot.
+
+### 3. Emojis disappeared from the pictures
+- 🟢 **Problem:** the captions have emojis (👇 🔥), but the font can't draw them, so they showed up as empty boxes on the card.
+- 🔵 **Solution:** remove emojis before drawing the caption on the image. The emojis stay in the post text itself.
+- 💡 **Lesson:** text that looks fine on screen can behave differently inside an image.
+
+### 4. Making the card beautiful but keeping the code simple
+- 🟢 **Problem:** my first card was plain: white text on black. I wanted it to look like a real sports graphic, without hundreds of lines of code.
+- 🔵 **Solution:** a few Pillow tricks go a long way: a gradient background (`Image.linear_gradient`), soft glows (a blurred ellipse with `GaussianBlur`), round team badges, a dimmed score for the losing team, and a see-through caption panel. Centring text with `anchor="mm"` kept the layout code short. The whole file is still about 80 lines.
+- 💡 **Lesson:** good design comes from a few well-chosen ideas, not from lots of code.
+
+### 5. "No module named matchday" / "No module named pytest"
+- 🟢 **Problem:** Python couldn't find my own code, and `pytest` didn't work.
+- 🔵 **Solution:** my code lives in `src/`, so Python needs `PYTHONPATH=src` to find it (and `pythonpath = ["src"]` in `pyproject.toml` for pytest). The packages were installed in `.venv`, so I have to turn it on first with `source .venv/bin/activate`.
+- 💡 **Lesson:** most "module not found" errors are about **where** Python looks, not about the code.
+
+### 6. My project picture didn't show on GitHub
+- 🟢 **Problem:** the cards are saved in `output/`, but that folder is in `.gitignore`, so it is never uploaded.
+- 🔵 **Solution:** I copied one example card to `docs/example-card.png` and used that in this README.
+- 💡 **Lesson:** `.gitignore` keeps generated files out of git, so anything the README shows has to live somewhere that is committed.
+
+### 7. Red errors in VS Code, but the code was fine (the hardest one!)
+- 🟢 **Problem:** VS Code showed red error counts on `checks.py`, `models.py` and `writers.py`. One error said `Module "matchday.models" has no attribute "CaptionDraft"`, even though `CaptionDraft` was clearly there. The tests passed, and the checks were clean in the terminal.
+- 🔵 **Solution:** step by step, I found several causes stacked on top of each other:
+  1. **flake8** marked every line over 79 characters as an error → a `.flake8` file sets a longer limit (130).
+  2. A few real small issues (an unused import, missing blank lines) → fixed in the code.
+  3. **mypy** didn't know my code was in `src/` → added `[tool.mypy] mypy_path = "src"` to `pyproject.toml`.
+  4. VS Code's mypy ran on an old **Python 3.9**, which can't read code written for my **Python 3.14** → installed mypy inside `.venv` and pointed VS Code to it in `.vscode/settings.json`.
+  5. **The real cause:** old mypy background processes (daemons) had been running for weeks and still remembered **old versions of my files**. Stopping them and fully quitting VS Code (Cmd+Q) finally cleared the errors.
+- 💡 **Lesson:** if the editor and the terminal disagree, trust the terminal and look for something **stale**: an old process, an old cache, or the wrong Python version. Read the exact error message: it tells you which tool is complaining.
+
+## Key takeaways
+
+1. **AI + code checks > AI alone.** The model writes, and plain Python decides whether it is good enough.
+2. **Feedback makes the system better.** Telling the writer *exactly* what was wrong works better than just asking it again.
+3. **Measure everything.** Saving every attempt in SQLite lets me see *which* rules fail most, not just whether something failed.
+4. **Small steps win.** One idea per commit made every problem easy to find and fix.
+5. **Tests give confidence.** After every change (even the image redesign), `pytest` told me nothing else had broken.
+6. **Debugging is about the environment too.** Many of my problems were not in my code at all, but in paths, versions, settings and old processes.
 
 ## How I built it, step by step
 
@@ -95,6 +150,7 @@ I built the project in small steps and committed each one to git. Each step adds
 | 16 | First match card | The program draws a picture with the score | Pillow `Image` + `ImageDraw`, a 1080×1080 PNG |
 | 17 | Caption on the card | The approved post text goes on the picture too | Text wrapping, emoji removal, and rendering inside the pipeline for passing Instagram captions |
 | 18 | Nicer design + README | Made the pictures beautiful and wrote this page | Gradient background, blurred glows, team badges, dimmed losing score, see-through caption panel |
+| 19 | Clean code + editor setup | Fixed all the red warnings in my editor | `.flake8`, `[tool.mypy]` in `pyproject.toml`, `.vscode/settings.json`, mypy in `.venv`, small style fixes |
 
 ## How it works
 
@@ -255,6 +311,7 @@ pytest
 | `No module named matchday` | You forgot `PYTHONPATH=src`, or you are not in the project folder |
 | `No module named pydantic` / `PIL` / `pytest` | The virtual environment is off: run Step 3, then Step 4 |
 | `command not found: python` | Use `python3`, or turn on the virtual environment first |
+| Red errors in VS Code, but `pytest` passes | Old mypy processes may still be running: run `pkill -f dmypy`, then quit VS Code with Cmd+Q and reopen it (see challenge 7) |
 | The card font looks plain | The cards use *Avenir Next Condensed*, which comes with macOS. On Windows or Linux, Pillow's default font is used instead |
 
 ## Project structure
