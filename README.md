@@ -93,6 +93,11 @@ Not everything worked the first time. These are the real problems I hit while bu
   5. **The real cause:** old mypy background processes (daemons) had been running for weeks and still remembered **old versions of my files**. Stopping them and fully quitting VS Code (Cmd+Q) finally cleared the errors.
 - 💡 **Lesson:** if the editor and the terminal disagree, trust the terminal and look for something **stale**: an old process, an old cache, or the wrong Python version. Read the exact error message: it tells you which tool is complaining.
 
+### 8. The real AI added facts that weren't in my data
+- 🟢 **Problem:** when I switched from the fake writer to the real Claude API, every caption passed all checks. But when I read them myself, Claude had added facts that weren't in my match data: *"a huge night **in Amsterdam**"*, *"Juventus run riot **at San Siro**"*, *"**Der Klassiker**"*. They happened to be true, but my checks couldn't know that: they only look at the score, players, length and hashtags.
+- 🔵 **Solution:** I added one rule to `SYSTEM_PROMPT` in `writers.py`: *"Do not mention stadiums, cities or rivalry names unless they are in the match data."* After that, these extra facts disappeared. I didn't write a new check for this, because code can't reliably spot an invented stadium or rivalry name: there are too many possibilities. A clear prompt rule was the simplest fix that works.
+- 💡 **Lesson:** "all checks passed" only means the things I check are correct. Always read real AI output with your own eyes too. Use **code checks** for facts you can measure (score, length) and **prompt rules** for things code can't easily catch.
+
 ## Key takeaways
 
 1. **AI + code checks > AI alone.** The model writes, and plain Python decides whether it is good enough.
@@ -160,7 +165,7 @@ I built the project in small steps and committed each one to git. Each step adds
         ▼
  ┌──────────────┐    prompt + feedback    ┌──────────────┐
  │   Pipeline   │ ──────────────────────▶ │    Writer    │
- │              │ ◀────────────────────── │  (mock LLM)  │
+ │              │ ◀────────────────────── │ (Claude/mock)│
  └──────┬───────┘     caption draft       └──────────────┘
         │
         ▼
@@ -194,9 +199,44 @@ I built the project in small steps and committed each one to git. Each step adds
 | `hashtags_ok` | Too many (or zero) hashtags |
 | `safe_language` | Insulting words that don't fit the brand voice |
 
-### About the mock writer
+### The two writers
 
-The pipeline uses `MockWriter`, a fake LLM. It is free, works offline and gives the same answer every time. It also **makes mistakes on purpose** on the first try (a swapped score, too many hashtags), so you can watch the feedback loop fix them. The prompts in `writers.py` are written for a real model, so a real LLM can replace it later.
+The project has two writers. Both have the same `write(match, platform, feedback)` method, so the rest of the pipeline doesn't care which one it gets.
+
+| Writer | What it is | When it is used |
+|---|---|---|
+| `ClaudeWriter` | The real AI: it calls the Claude API | When `ANTHROPIC_API_KEY` is set |
+| `MockWriter` | A fake AI: free, offline, same answer every time. It **makes mistakes on purpose** on the first try, so you can watch the feedback loop fix them | When there is no API key |
+
+### How the Claude API is called
+
+🟢 **In simple words:** for every caption, the project sends Claude one message: *"Here are the rules, here is the match, please fill in this form."* Claude sends back the filled-in form (a caption and hashtags). Then my own Python checks decide if it is good enough.
+
+🔵 **Technically:** the only API call is in `ClaudeWriter.write()` in `src/matchday/writers.py`:
+
+```python
+response = self.client.messages.parse(
+    model="claude-opus-5-5",          # which Claude model answers
+    max_tokens=4000,                  # upper limit on how long the answer can be
+    output_config={"effort": "low"},  # how hard to think: low is enough for short captions
+    system=SYSTEM_PROMPT,             # the brand voice and hard rules
+    messages=[{"role": "user", "content": build_user_prompt(...)}],  # this match's data
+    output_format=CaptionDraft,       # the exact shape the answer must have
+)
+```
+
+| Part | What it does | Simple version |
+|---|---|---|
+| `anthropic.Anthropic()` | Creates the client that talks to the API. It finds the key in `ANTHROPIC_API_KEY` by itself, so the key is never in the code | "Open the phone line" |
+| `system` | Instructions that apply to every caption | "Here's who you are and the rules" |
+| `messages` | The actual request: platform, limits, match JSON and any feedback | "Here's the job" |
+| `output_format=CaptionDraft` | Claude must reply as my Pydantic model (`caption` + `hashtags`) | "Fill in this form, don't write free text" |
+
+**Why `.parse()` and not `.create()`?** `.create()` returns plain text that I would have to turn into data myself. `.parse()` checks the answer against `CaptionDraft` and gives me a ready Python object in `response.parsed_output`.
+
+**Retries:** the API does not remember earlier calls. On a retry, the whole request is sent again, with the list of failed checks added to the prompt.
+
+**Why prompt rules *and* code checks?** A prompt asks the model to follow a rule, but it can't guarantee it. In one run, Claude wrote a TikTok caption that was 163 characters long (limit 150), even though the prompt states the limit. The `length_ok` check caught it, and the second try passed.
 
 ## Example output
 
@@ -257,11 +297,11 @@ source .venv/bin/activate
 ### Step 4: Install the packages (one time only)
 
 ```bash
-pip install pydantic pillow pytest
+pip install pydantic pillow pytest anthropic
 ```
 
-🟢 This downloads the three tools the project uses.
-🔵 `pydantic` handles data models and validation, `pillow` draws the images, and `pytest` runs the tests.
+🟢 This downloads the four tools the project uses.
+🔵 `pydantic` handles data models and validation, `pillow` draws the images, `pytest` runs the tests, and `anthropic` is the official library for the Claude API.
 
 ### Step 5: Run the pipeline
 
@@ -271,6 +311,23 @@ PYTHONPATH=src python -m matchday
 
 🟢 This starts the project. You'll see the writer make mistakes, get feedback and fix them, and a small report appears at the end.
 🔵 The code lives in `src/matchday/`, so `PYTHONPATH=src` tells Python where to find the `matchday` package. `-m matchday` runs `src/matchday/__main__.py`, which calls `run_pipeline()`.
+
+Without an API key, this uses the free `MockWriter`. The first line of the output tells you which writer is running.
+
+### Step 5b (optional): Use the real Claude AI
+
+1. Go to [console.anthropic.com](https://console.anthropic.com), add a little credit under **Settings → Billing** (a few dollars is plenty), then create a key under **Settings → API Keys**. The key is shown **only once**, so copy it right away.
+2. Save the key in your terminal settings (Mac):
+
+   ```bash
+   echo 'export ANTHROPIC_API_KEY="PASTE_YOUR_KEY_HERE"' >> ~/.zshrc
+   source ~/.zshrc
+   ```
+
+3. Run Step 5 again. The first line should now say `Writer: Claude`.
+
+🟢 The key is like a password plus a credit card: never put it in your code, commit it to git or share it in a chat. If it leaks, delete it in the Console and create a new one.
+🔵 `~/.zshrc` is in your home folder, not in the project, so git can never commit it. The `anthropic` library reads `ANTHROPIC_API_KEY` from the environment automatically. One full run makes about 15–20 short API calls and costs a few cents.
 
 ### Step 6: Look at the results
 
@@ -312,6 +369,9 @@ pytest
 | `No module named pydantic` / `PIL` / `pytest` | The virtual environment is off: run Step 3, then Step 4 |
 | `command not found: python` | Use `python3`, or turn on the virtual environment first |
 | Red errors in VS Code, but `pytest` passes | Old mypy processes may still be running: run `pkill -f dmypy`, then quit VS Code with Cmd+Q and reopen it (see challenge 7) |
+| `Writer: MockWriter` but you wanted Claude | The key isn't loaded in this terminal: run `source ~/.zshrc` |
+| `AuthenticationError` / `invalid x-api-key` | The key is wrong or deleted: copy it again exactly, or create a new one |
+| `credit balance is too low` | Add credit under **Settings → Billing** in the Console |
 | The card font looks plain | The cards use *Avenir Next Condensed*, which comes with macOS. On Windows or Linux, Pillow's default font is used instead |
 
 ## Project structure
@@ -323,7 +383,7 @@ matchday-ai/
 ├── src/matchday/
 │   ├── __main__.py         # entry point: python -m matchday
 │   ├── models.py           # Pydantic models: Match, Goal, CaptionDraft, Platform
-│   ├── writers.py          # system prompt, user prompt and the MockWriter
+│   ├── writers.py          # system prompt, user prompt, ClaudeWriter and MockWriter
 │   ├── checks.py           # the six quality checks
 │   ├── pipeline.py         # load → write → check → retry → save → render
 │   ├── db.py               # SQLite tables and the SQL report
@@ -334,7 +394,7 @@ matchday-ai/
 
 ## Next steps
 
-- [ ] Replace `MockWriter` with a real LLM (for example the Claude API) using the same prompts
+- [x] Replace `MockWriter` with a real LLM (the Claude API) using the same prompts
 - [ ] Add real team colours and logos to the match cards
 - [ ] Add a `requirements.txt` or `pyproject.toml` dependencies
 - [ ] Compare first-try pass rates across different prompts

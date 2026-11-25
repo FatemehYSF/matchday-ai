@@ -1,9 +1,10 @@
 import json
+import os
 from pathlib import Path
 
 from .checks import run_all_checks
 from .models import PLATFORMS, Match
-from .writers import MockWriter
+from .writers import ClaudeWriter, MockWriter
 
 from . import db
 from .graphics import render_match_card
@@ -36,7 +37,12 @@ def run_pipeline(matches_path: str = "data/matches.json") -> None:
     conn = db.connect()
     matches = load_matches(matches_path)
     known_players = {g.player for m in matches for g in m.goals}
-    writer = MockWriter()
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        writer: MockWriter | ClaudeWriter = ClaudeWriter()
+        print("Writer: Claude")
+    else:
+        writer = MockWriter()
+        print("Writer: MockWriter (set ANTHROPIC_API_KEY to use Claude)")
 
     for match in matches:
         for platform in PLATFORMS.values():

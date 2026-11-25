@@ -12,6 +12,7 @@ Hard rules:
 - The score must appear exactly as given, in the form HOME_SCORE-AWAY_SCORE.
 - Mention both team names exactly as written in the data.
 - Only mention players who scored in this match.
+- Do not mention stadiums, cities or rivalry names unless they are in the match data.
 - Hashtags go in the hashtags list, not in the caption text."""
 
 
@@ -53,3 +54,26 @@ class MockWriter:
         if not feedback and platform.name == "tiktok":                      # NEW
             hashtags = [tag, "#Football", "#Matchday", "#FullTime", "#Goals"]  # NEW
         return CaptionDraft(caption=caption, hashtags=hashtags)
+
+
+class ClaudeWriter:
+    """A real LLM: asks Claude to write the caption."""
+
+    def __init__(self, model: str = "claude-opus-5-5") -> None:
+        import anthropic  # imported here so MockWriter works without the package
+
+        self.client = anthropic.Anthropic()  # reads ANTHROPIC_API_KEY from the environment
+        self.model = model
+
+    def write(self, match: Match, platform: Platform, feedback: list[str]) -> CaptionDraft:
+        response = self.client.messages.parse(
+            model=self.model,
+            max_tokens=4000,
+            output_config={"effort": "low"},  # short captions don't need deep thinking
+            system=SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": build_user_prompt(match, platform, feedback)}],
+            output_format=CaptionDraft,  # Claude must answer in this exact shape
+        )
+        if response.stop_reason == "refusal" or response.parsed_output is None:
+            raise RuntimeError(f"Claude gave no caption (stop_reason={response.stop_reason})")
+        return response.parsed_output
