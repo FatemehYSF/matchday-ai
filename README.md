@@ -78,12 +78,7 @@ Not everything worked the first time. These are the real problems I hit while bu
 - 🔵 **Solution:** my code lives in `src/`, so Python needs `PYTHONPATH=src` to find it (and `pythonpath = ["src"]` in `pyproject.toml` for pytest). The packages were installed in `.venv`, so I have to turn it on first with `source .venv/bin/activate`.
 - 💡 **Lesson:** most "module not found" errors are about **where** Python looks, not about the code.
 
-### 6. My project picture didn't show on GitHub
-- 🟢 **Problem:** the cards are saved in `output/`, but that folder is in `.gitignore`, so it is never uploaded.
-- 🔵 **Solution:** I copied one example card to `docs/example-card.png` and used that in this README.
-- 💡 **Lesson:** `.gitignore` keeps generated files out of git, so anything the README shows has to live somewhere that is committed.
-
-### 7. Red errors in VS Code, but the code was fine (the hardest one!)
+### 6. Red errors in VS Code, but the code was fine (the hardest one!)
 - 🟢 **Problem:** VS Code showed red error counts on `checks.py`, `models.py` and `writers.py`. One error said `Module "matchday.models" has no attribute "CaptionDraft"`, even though `CaptionDraft` was clearly there. The tests passed, and the checks were clean in the terminal.
 - 🔵 **Solution:** step by step, I found several causes stacked on top of each other:
   1. **flake8** marked every line over 79 characters as an error → a `.flake8` file sets a longer limit (130).
@@ -93,7 +88,7 @@ Not everything worked the first time. These are the real problems I hit while bu
   5. **The real cause:** old mypy background processes (daemons) had been running for weeks and still remembered **old versions of my files**. Stopping them and fully quitting VS Code (Cmd+Q) finally cleared the errors.
 - 💡 **Lesson:** if the editor and the terminal disagree, trust the terminal and look for something **stale**: an old process, an old cache, or the wrong Python version. Read the exact error message: it tells you which tool is complaining.
 
-### 8. The real AI added facts that weren't in my data
+### 7. The real AI added facts that weren't in my data
 - 🟢 **Problem:** when I switched from the fake writer to the real Claude API, every caption passed all checks. But when I read them myself, Claude had added facts that weren't in my match data: *"a huge night **in Amsterdam**"*, *"Juventus run riot **at San Siro**"*, *"**Der Klassiker**"*. They happened to be true, but my checks couldn't know that: they only look at the score, players, length and hashtags.
 - 🔵 **Solution:** I added one rule to `SYSTEM_PROMPT` in `writers.py`: *"Do not mention stadiums, cities or rivalry names unless they are in the match data."* After that, these extra facts disappeared. I didn't write a new check for this, because code can't reliably spot an invented stadium or rivalry name: there are too many possibilities. A clear prompt rule was the simplest fix that works.
 - 💡 **Lesson:** "all checks passed" only means the things I check are correct. Always read real AI output with your own eyes too. Use **code checks** for facts you can measure (score, length) and **prompt rules** for things code can't easily catch.
@@ -368,7 +363,7 @@ pytest
 | `No module named matchday` | You forgot `PYTHONPATH=src`, or you are not in the project folder |
 | `No module named pydantic` / `PIL` / `pytest` | The virtual environment is off: run Step 3, then Step 4 |
 | `command not found: python` | Use `python3`, or turn on the virtual environment first |
-| Red errors in VS Code, but `pytest` passes | Old mypy processes may still be running: run `pkill -f dmypy`, then quit VS Code with Cmd+Q and reopen it (see challenge 7) |
+| Red errors in VS Code, but `pytest` passes | Old mypy processes may still be running: run `pkill -f dmypy`, then quit VS Code with Cmd+Q and reopen it (see challenge 6) |
 | `Writer: MockWriter` but you wanted Claude | The key isn't loaded in this terminal: run `source ~/.zshrc` |
 | `AuthenticationError` / `invalid x-api-key` | The key is wrong or deleted: copy it again exactly, or create a new one |
 | `credit balance is too low` | Add credit under **Settings → Billing** in the Console |
