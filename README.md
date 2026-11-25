@@ -78,12 +78,7 @@ Not everything worked the first time. These are the real problems I hit while bu
 - 🔵 **Solution:** my code lives in `src/`, so Python needs `PYTHONPATH=src` to find it (and `pythonpath = ["src"]` in `pyproject.toml` for pytest). The packages were installed in `.venv`, so I have to turn it on first with `source .venv/bin/activate`.
 - 💡 **Lesson:** most "module not found" errors are about **where** Python looks, not about the code.
 
-### 6. My project picture didn't show on GitHub
-- 🟢 **Problem:** the cards are saved in `output/`, but that folder is in `.gitignore`, so it is never uploaded.
-- 🔵 **Solution:** I copied one example card to `docs/example-card.png` and used that in this README.
-- 💡 **Lesson:** `.gitignore` keeps generated files out of git, so anything the README shows has to live somewhere that is committed.
-
-### 7. Red errors in VS Code, but the code was fine (the hardest one!)
+### 6. Red errors in VS Code, but the code was fine (the hardest one!)
 - 🟢 **Problem:** VS Code showed red error counts on `checks.py`, `models.py` and `writers.py`. One error said `Module "matchday.models" has no attribute "CaptionDraft"`, even though `CaptionDraft` was clearly there. The tests passed, and the checks were clean in the terminal.
 - 🔵 **Solution:** step by step, I found several causes stacked on top of each other:
   1. **flake8** marked every line over 79 characters as an error → a `.flake8` file sets a longer limit (130).
