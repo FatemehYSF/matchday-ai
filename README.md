@@ -205,8 +205,6 @@ The project has two writers. Both have the same `write(match, platform, feedback
 
 ### How the Claude API is called
 
-🟢 **In simple words:** for every caption, the project sends Claude one message: *"Here are the rules, here is the match, please fill in this form."* Claude sends back the filled-in form (a caption and hashtags). Then my own Python checks decide if it is good enough.
-
 🔵 **Technically:** the only API call is in `ClaudeWriter.write()` in `src/matchday/writers.py`:
 
 ```python
